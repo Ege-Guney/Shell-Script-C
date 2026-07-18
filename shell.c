@@ -107,8 +107,7 @@ int locateJob(int place_in_line){
 //all functions
 int runCd(char* file_path){
     if(file_path == NULL){
-        printf(file_path);
-        printf("\n");
+        fprintf(stderr, "cd: missing path\n");
         return 1;
     }
     else{
@@ -124,20 +123,13 @@ int runCd(char* file_path){
     return -1;
 }
 
-void freeJobMem(struct job *cur_job, struct job *prev_job){
-    
-}
-
 int runJobs(){ //run jobs command
     struct job *prev_job = head_job;//need the previously running command
     struct job *cur_job;  //need the currently running command  
     struct job *printer_job;
      
-    int clear_pids[LENGTH];
-    int i = 0;
     //printJobs();
-    int first_done = 0; //flag to fix bug
-    for(cur_job = head_job; cur_job != NULL; 1){ //go through every job
+    for(cur_job = head_job; cur_job != NULL; ){ //go through every job
         int waiter_id = waitpid(cur_job->pid, &status, WNOHANG);
 
         printf("%d",cur_job->line_place);
@@ -268,8 +260,6 @@ int runPipe(char *args[], int count){
     //printf("%s, %s\n",parent_args[0], parent_args[1]);
     //printf("%s, %s, %s\n", args[0], args[1], args[2]);
     
-    int pp= getppid(); //current pid
-    
     int first_child_pid = fork();
 
     if(first_child_pid == 0){
@@ -332,6 +322,7 @@ int runPipe(char *args[], int count){
 
 void sigint_handler(int sig) {
     // add your code here
+    (void)sig;
     if(foreground_pid != background_pid){ //if in background
         kill(background_pid, SIGKILL); //kill process
         //printf("\nYou have pressed CTRL-C this caused the current process to stop\n");
@@ -350,7 +341,7 @@ void handle_sigtstp(int sig) {
 
 int getcmd(char *prompt, char *args[], int *background){
 
-    int length, flag, i = 0;
+    int length, i = 0;
     char *token, *loc;
     char *line = NULL;
     size_t linecap = 0;
@@ -380,7 +371,7 @@ int getcmd(char *prompt, char *args[], int *background){
 
     // Splitting the command and putting the tokens inside args[]
     while ((token = strsep(&line, " \t\n")) != NULL) {
-        for (int j = 0; j < strlen(token); j++) {
+        for (size_t j = 0; j < strlen(token); j++) {
             if (token[j] <= 32) { 
                 token[j] = '\0'; 
             }
@@ -397,9 +388,6 @@ int getcmd(char *prompt, char *args[], int *background){
 
 int main(void) { 
     char* args[LENGTH];
-    char* abs_path_name[50];
-    int redirection; /* flag for output redirection */
-    int piping; /* flag for piping */
     int bg;     /* flag for running processes in the background */
     int cnt; /* count of the arguments in the command */
     foreground_pid = getppid();
@@ -502,11 +490,7 @@ int main(void) {
         // For the child process
             if (pid == 0) {
             // execute the command
-                sleep(0.2); //wait just in case, we do not want any unnecesarry errors
-                
-                int redirectFlag = 0; //if redirect is there => 1, otherwise => 0, initialize as 0
-                
-                int file = -1; //initialize as -1
+                usleep(200000); //briefly yield before replacing the child process
 
                 //redirect
                 int i = 0;
@@ -514,8 +498,7 @@ int main(void) {
 
                     if(strcmp(args[i], ">") == 0){ //if there is output redirection
                         printf("Output redirection commencing...\n");
-                        redirectFlag = 1; //we need to use later on to close redirection!
-                        file = runRedirection(cnt, args, i);
+                        runRedirection(cnt, args, i);
                         break;
                     }
                 }
